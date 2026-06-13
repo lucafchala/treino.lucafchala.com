@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nippard UPPPL → Hevy</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #181818;
+    --surface2: #222222;
+    --border: #2a2a2a;
+    --accent: #c8f04a;
+    --accent-dim: #8aaa2a;
+    --text: #e8e8e8;
+    --text-dim: #888;
+    --tag-upper: #4a8fc8;
+    --tag-lower: #c84a4a;
+    --tag-pull: #4ac87a;
+    --tag-push: #c8824a;
+    --tag-legs: #9b4ac8;
+    --warn: #f0c040;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+  
+  header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
+  header p { font-size: 0.78rem; color: var(--text-dim); margin-top: 4px; }
+
+  .save-btn {
+    background: var(--accent); color: #0f0f0f; border: none; padding: 8px 18px;
+    font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer; border-radius: 3px; white-space: nowrap; align-self: flex-start;
+  }
+  .save-btn:hover { background: #d8ff55; }
+
+  .filter-bar {
+    display: flex; gap: 8px; padding: 14px 32px; border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; align-items: center;
+  }
+  .filter-label { font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px; }
+  .filter-btn {
+    padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-dim); font-size: 0.75rem; cursor: pointer; transition: all 0.15s;
+  }
+  .filter-btn.active, .filter-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(200,240,74,0.07); }
+  .filter-btn[data-day="upper_strength"].active { border-color: var(--tag-upper); color: var(--tag-upper); background: rgba(74,143,200,0.07); }
+  .filter-btn[data-day="lower_strength"].active { border-color: var(--tag-lower); color: var(--tag-lower); background: rgba(200,74,74,0.07); }
+  .filter-btn[data-day="pull_hypertrophy"].active { border-color: var(--tag-pull); color: var(--tag-pull); background: rgba(74,200,122,0.07); }
+  .filter-btn[data-day="push_hypertrophy"].active { border-color: var(--tag-push); color: var(--tag-push); background: rgba(200,130,74,0.07); }
+  .filter-btn[data-day="legs_hypertrophy"].active { border-color: var(--tag-legs); color: var(--tag-legs); background: rgba(155,74,200,0.07); }
+
+  main { padding: 24px 32px 48px; }
+
+  .day-section { margin-bottom: 40px; }
+  .day-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .day-tag {
+    padding: 3px 10px; border-radius: 3px; font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .day-tag.upper_strength { background: rgba(74,143,200,0.18); color: var(--tag-upper); }
+  .day-tag.lower_strength { background: rgba(200,74,74,0.18); color: var(--tag-lower); }
+  .day-tag.pull_hypertrophy { background: rgba(74,200,122,0.18); color: var(--tag-pull); }
+  .day-tag.push_hypertrophy { background: rgba(200,130,74,0.18); color: var(--tag-push); }
+  .day-tag.legs_hypertrophy { background: rgba(155,74,200,0.18); color: var(--tag-legs); }
+  .day-title { font-size: 0.95rem; font-weight: 600; }
+
+  .exercise-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    margin-bottom: 10px; overflow: hidden; transition: border-color 0.15s;
+  }
+  .exercise-card.selected { border-color: var(--accent-dim); }
+  .exercise-card.selected .card-header { background: rgba(200,240,74,0.04); }
+
+  .card-header {
+    display: grid; grid-template-columns: 1fr auto; align-items: center;
+    padding: 14px 16px; cursor: pointer; gap: 12px;
+  }
+  .card-header:hover { background: var(--surface2); }
+  
+  .ex-name { font-size: 0.88rem; font-weight: 600; }
+  .ex-meta { font-size: 0.73rem; color: var(--text-dim); margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .meta-item { display: flex; align-items: center; gap: 4px; }
+  .meta-item svg { flex-shrink: 0; }
+
+  .card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .toggle-icon { width: 20px; height: 20px; color: var(--text-dim); transition: transform 0.2s; flex-shrink: 0; }
+  .exercise-card.open .toggle-icon { transform: rotate(180deg); }
+
+  .card-body { display: none; padding: 0 16px 16px; border-top: 1px solid var(--border); }
+  .exercise-card.open .card-body { display: block; }
+
+  .alts-row {
+    margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  }
+  .alts-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px; }
+  .alt-chip {
+    padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text-dim); font-size: 0.75rem; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .alt-chip.canonical { border-color: var(--border); }
+  .alt-chip.selected-alt { border-color: var(--accent); color: var(--accent); background: rgba(200,240,74,0.09); }
+  .alt-chip:hover { border-color: var(--text-dim); color: var(--text); }
+  .alt-chip.selected-alt:hover { border-color: var(--accent); }
+
+  .notes-box {
+    margin-top: 12px; padding: 10px 12px; background: var(--surface2); border-radius: 4px;
+    font-size: 0.77rem; color: var(--text-dim); line-height: 1.6; border-left: 2px solid var(--border);
+  }
+  .notes-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin-bottom: 4px; display: block; }
+  .notes-text { color: var(--text); }
+
+  .technique-row {
+    margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .technique-chip {
+    padding: 3px 10px; border-radius: 3px; font-size: 0.7rem; font-weight: 600;
+    background: rgba(240,192,64,0.12); color: var(--warn); border: 1px solid rgba(240,192,64,0.25);
+  }
+  .rpe-chip {
+    padding: 3px 10px; border-radius: 3px; font-size: 0.7rem;
+    background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border);
+  }
+
+  .hevy-export {
+    margin-top: 48px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  }
+  .hevy-export h3 { font-size: 0.85rem; font-weight: 700; margin-bottom: 12px; color: var(--accent); }
+  .hevy-export p { font-size: 0.78rem; color: var(--text-dim); margin-bottom: 12px; line-height: 1.6; }
+  .hevy-list { font-size: 0.78rem; line-height: 2; }
+  .hevy-list .day-group { margin-bottom: 16px; }
+  .hevy-list .day-name { font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .hevy-list .ex-line { color: var(--text-dim); padding-left: 16px; }
+  .hevy-list .ex-line span { color: var(--accent); }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--accent); color: #0f0f0f;
+    padding: 10px 18px; border-radius: 4px; font-size: 0.78rem; font-weight: 700;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999;
+  }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 600px) {
+    header, .filter-bar, main { padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Nippard UPPPL → Hevy</h1>
+    <p>Bodybuilding Transformation System · Intermediate/Advanced · Select your exercise preferences</p>
+  </div>
+  <button class="save-btn" onclick="exportHevy()">📋 Copy Hevy List</button>
+</header>
+
+<div class="filter-bar">
+  <span class="filter-label">Filter:</span>
+  <button class="filter-btn active" data-day="all" onclick="filterDay('all',this)">All Days</button>
+  <button class="filter-btn" data-day="upper_strength" onclick="filterDay('upper_strength',this)">Upper · Strength</button>
+  <button class="filter-btn" data-day="lower_strength" onclick="filterDay('lower_strength',this)">Lower · Strength</button>
+  <button class="filter-btn" data-day="pull_hypertrophy" onclick="filterDay('pull_hypertrophy',this)">Pull · Hypertrophy</button>
+  <button class="filter-btn" data-day="push_hypertrophy" onclick="filterDay('push_hypertrophy',this)">Push · Hypertrophy</button>
+  <button class="filter-btn" data-day="legs_hypertrophy" onclick="filterDay('legs_hypertrophy',this)">Legs · Hypertrophy</button>
+</div>
+
+<main id="main"></main>
+
+<div class="toast" id="toast">Copied to clipboard!</div>
+
+<script>
+const PROGRAM = {
+  days: [
+    {
+      id: "upper_strength",
+      label: "Upper (Strength Focus)",
+      exercises: [
+        { name: "45° Incline Barbell Press", sets: "2 working", reps: "6–8", rest: "3–5 min", technique: "Failure (W2+)", rpe: "~6-7 early / ~7-8 last (W1) · RPE 10 last (W2+)", notes: "1 second pause at the bottom of each rep while maintaining tension on the pecs.", canonical: "45° Incline Barbell Press", alts: ["45° Incline DB Press", "45° Incline Machine Press"] },
+        { name: "Cable Crossover Ladder", sets: "2 working", reps: "8–10", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Do one set low cable, one mid, one high. If only 1–2 sets, pick your preferred positions.", canonical: "Cable Crossover Ladder", alts: ["Pec Deck", "Bottom-Half DB Flye"] },
+        { name: "Wide-Grip Pull-Up", sets: "2 working", reps: "8–10", rest: "2–3 min", technique: "Failure (W2+)", rpe: "~6-7 early / ~7-8 last (W1) · RPE 10 last (W2+)", notes: "1.5× shoulder width overhand grip. Slow 2–3 second negative. Feel your lats pulling apart on the way down.", canonical: "Wide-Grip Pull-Up", alts: ["Wide-Grip Lat Pulldown", "Dual-Handle Lat Pulldown"] },
+        { name: "High-Cable Lateral Raise", sets: "2 working", reps: "8–10", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Focus on squeezing your lateral delt to move the weight.", canonical: "High-Cable Lateral Raise", alts: ["High-Cable Cuffed Lateral Raise", "Lean-In DB Lateral Raise"] },
+        { name: "Pendlay Deficit Row", sets: "2 working", reps: "6–8", rest: "2–3 min", technique: "Failure + LLPs/Extend set (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Stand on a bumper plate. Focus on getting a big stretch and touch your stomach/chest on each rep!", canonical: "Pendlay Deficit Row", alts: ["Smith Machine Row", "Single-Arm DB Row"] },
+        { name: "Overhead Cable Triceps Extension (Bar)", sets: "2 working", reps: "8–10", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Optionally pause for 0.5–1 second in the stretched aspect of each rep.", canonical: "Overhead Cable Triceps Extension (Bar)", alts: ["Overhead Cable Triceps Extension (Rope)", "DB Skull Crusher"] },
+        { name: "Bayesian Cable Curl", sets: "2 working", reps: "8–10", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "If left-right imbalance: start with weaker arm, then match reps with the stronger. Otherwise do both arms simultaneously.", canonical: "Bayesian Cable Curl", alts: ["Seated Super-Bayesian High Cable Curl", "Incline DB Stretch Curl"] }
+      ]
+    },
+    {
+      id: "lower_strength",
+      label: "Lower (Strength Focus)",
+      exercises: [
+        { name: "Lying Leg Curl", sets: "2 working", reps: "8–10", rest: "1–2 min", technique: "Failure + LLPs (W5)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Set the machine so you get the biggest stretch possible at the bottom. Prevent your butt from popping up as you curl.", canonical: "Lying Leg Curl", alts: ["Seated Leg Curl", "Nordic Ham Curl"] },
+        { name: "Smith Machine Squat", sets: "2 working", reps: "6–8", rest: "3–5 min", technique: "Failure (W2+)", rpe: "~6-7 early / ~7-8 last (W1) · RPE 10 last (W2+)", notes: "Feet ~3–6 inches forward from normal squat stance. Lean back into bar for more upright torso and quad tension. If heels raise → feet more forward. If back rounds → feet back.", canonical: "Smith Machine Squat", alts: ["DB Bulgarian Split Squat", "High-Bar Back Squat"] },
+        { name: "Barbell RDL", sets: "2 working", reps: "6–8", rest: "2–3 min", technique: "Failure (W2+)", rpe: "~6-7 early / ~7-8 last (W1) · RPE 10 last (W2+)", notes: "Stop about 75% of the way to full lockout — stay in the bottom 3/4 of ROM to keep hamstring tension.", canonical: "Barbell RDL", alts: ["DB RDL", "Snatch-Grip RDL"] },
+        { name: "Leg Extension", sets: "2 working", reps: "8–10", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Seat back as far as comfortable. Grab handles hard to pull butt into seat. 2–3 second negative. Feel quads pulling apart on the negative.", canonical: "Leg Extension", alts: ["Reverse Nordic", "Sissy Squat"] },
+        { name: "Standing Calf Raise", sets: "2 working", reps: "6–8", rest: "1–2 min", technique: "Static Stretch 30s (W5)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "1–2 second pause at the bottom. Roll your ankle back and forth on the balls of your feet rather than just going up onto toes.", canonical: "Standing Calf Raise", alts: ["Seated Calf Raise", "Leg Press Calf Press"] },
+        { name: "Cable Crunch", sets: "2 working", reps: "8–10", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Round your lower back as you crunch. Maintain a mind-muscle connection with your 6-pack.", canonical: "Cable Crunch", alts: ["Decline Weighted Crunch", "Machine Crunch"] }
+      ]
+    },
+    {
+      id: "pull_hypertrophy",
+      label: "Pull (Hypertrophy Focus)",
+      exercises: [
+        { name: "Neutral-Grip Lat Pulldown", sets: "2 working", reps: "8–10", rest: "2–3 min", technique: "Failure (W2+)", rpe: "~6-7 early / ~7-8 last (W1) · RPE 10 last (W2+)", notes: "Pull the handle more out in front of you — like a cross between a pullover and a pulldown. Focus on feeling your lats more than the weight.", canonical: "Neutral-Grip Lat Pulldown", alts: ["Neutral-Grip Pull-Up", "Dual-Handle Lat Pulldown"] },
+        { name: "Chest-Supported Machine Row", sets: "2 working (W1–4) / 3 working (W5+)", reps: "8–10", rest: "2–3 min", technique: "Failure (W2+)", rpe: "~6-7 early / ~7-8 last (W1) · RPE 10 last (W2+)", notes: "Flare elbows at roughly 45° and squeeze your shoulder blades together hard at the top of each rep.", canonical: "Chest-Supported Machine Row", alts: ["Chest-Supported T-Bar Row", "Incline Chest-Supported DB Row"] },
+        { name: "Neutral-Grip Seated Cable Row", sets: "2 working", reps: "10–12", rest: "2–3 min", technique: "Failure + LLPs (W5)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Focus on squeezing your shoulder blades together, driving your elbows down and back.", canonical: "Neutral-Grip Seated Cable Row", alts: ["Helms Row", "Meadows Row"] },
+        { name: "1-Arm 45° Cable Rear Delt Flye", sets: "2 working", reps: "10–12", rest: "1–2 min", technique: "Myo-reps (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Pause 1–2 seconds in the squeeze of each rep. Contract the rear delts hard!", canonical: "1-Arm 45° Cable Rear Delt Flye", alts: ["Rope Face Pull", "Reverse Pec Deck"] },
+        { name: "Machine Shrug", sets: "2 working", reps: "10–12", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Brief pause at the top. Think about pulling your shoulders up to your ears!", canonical: "Machine Shrug", alts: ["Cable Paused Shrug-In", "DB Shrug"] },
+        { name: "EZ-Bar Cable Curl", sets: "2 working", reps: "10–12", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Cable at the lowest position. Constant tension on the biceps. Slow, controlled reps!", canonical: "EZ-Bar Cable Curl", alts: ["EZ-Bar Curl", "DB Curl"] },
+        { name: "Machine Preacher Curl", sets: "1 working", reps: "12–15", rest: "1–2 min", technique: "Myo-reps (W2+)", rpe: "N/A early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Smooth, controlled reps. Mind-muscle connection with the biceps.", canonical: "Machine Preacher Curl", alts: ["EZ-Bar Preacher Curl", "DB Preacher Curl"] }
+      ]
+    },
+    {
+      id: "push_hypertrophy",
+      label: "Push (Hypertrophy Focus)",
+      exercises: [
+        { name: "Barbell Bench Press", sets: "2 working", reps: "8–10", rest: "3–5 min", technique: "Failure (W2+)", rpe: "~6-7 early / ~7-8 last (W1) · RPE 10 last (W2+)", notes: "Set up a comfortable arch, quick pause on the chest and explode up on each rep.", canonical: "Barbell Bench Press", alts: ["Machine Chest Press", "DB Bench Press"] },
+        { name: "Machine Shoulder Press", sets: "2 working", reps: "8–10", rest: "2–3 min", technique: "Failure (W2+)", rpe: "~6-7 early / ~7-8 last (W1) · RPE 10 last (W2+)", notes: "Elbows break at least 90°. Mind-muscle connection with your delts. Smooth, controlled reps.", canonical: "Machine Shoulder Press", alts: ["Cable Shoulder Press", "Seated DB Shoulder Press"] },
+        { name: "Bottom-Half DB Flye", sets: "2 working", reps: "10–12", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "All reps in the bottom half of ROM only. Focus on feeling a deep stretch in your pecs at the bottom.", canonical: "Bottom-Half DB Flye", alts: ["Bottom-Half Seated Cable Flye", "Low-to-High Cable Crossover"] },
+        { name: "High-Cable Lateral Raise", sets: "2 working", reps: "10–12", rest: "1–2 min", technique: "Myo-reps (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Focus on squeezing your lateral delt to move the weight.", canonical: "High-Cable Lateral Raise", alts: ["High-Cable Cuffed Lateral Raise", "Lean-In DB Lateral Raise"] },
+        { name: "Overhead Cable Triceps Extension (Bar)", sets: "2 working", reps: "10–12", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Optionally pause for 0.5–1 second in the stretched aspect of each rep.", canonical: "Overhead Cable Triceps Extension (Bar)", alts: ["Overhead Cable Triceps Extension (Rope)", "DB Skull Crusher"] },
+        { name: "Cable Triceps Kickback", sets: "1 working", reps: "12–15", rest: "1–2 min", technique: "Myo-reps (W2+)", rpe: "N/A early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Upright or bent over — whichever feels comfortable. Key: shoulder positioned back behind torso at the full squeeze.", canonical: "Cable Triceps Kickback", alts: ["DB Triceps Kickback", "Bench Dip"] },
+        { name: "Roman Chair Leg Raise", sets: "2 working", reps: "10–20", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Allow your lower back to round as you curl your legs up. 10–20 is intentionally wide — just go until you hit listed RPE with controlled form.", canonical: "Roman Chair Leg Raise", alts: ["Hanging Leg Raise", "Modified Candlestick"] }
+      ]
+    },
+    {
+      id: "legs_hypertrophy",
+      label: "Legs (Hypertrophy Focus)",
+      exercises: [
+        { name: "Leg Press", sets: "2 working", reps: "8–10", rest: "2–3 min", technique: "Failure (W2+)", rpe: "~6-7 early / ~7-8 last (W1) · RPE 10 last (W2+)", notes: "Feet lower on the platform for more quad focus. Deep as you can without excessive back rounding. Control the negative, slight pause at the bottom.", canonical: "Leg Press", alts: ["Smith Machine Static Lunge", "DB Walking Lunge"] },
+        { name: "Seated Leg Curl", sets: "2 working", reps: "10–12", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Lean forward over the machine to get a maximum stretch in your hamstrings.", canonical: "Seated Leg Curl", alts: ["Lying Leg Curl", "Nordic Ham Curl"] },
+        { name: "DB Bulgarian Split Squat", sets: "2 working", reps: "8–10", rest: "2–3 min", technique: "Failure (W2+)", rpe: "~6-7 early / ~7-8 last (W1) · RPE 10 last (W2+)", notes: "Lower all the way until front thigh is parallel to the ground. Drive through your front heel on the way up.", canonical: "DB Bulgarian Split Squat", alts: ["DB Step-Up", "Goblet Squat"] },
+        { name: "Leg Extension", sets: "2 working", reps: "10–12", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Seat back as far as comfortable. Grab handles hard to pull butt into seat. 2–3 second negative. Feel quads pulling apart on the negative.", canonical: "Leg Extension", alts: ["Reverse Nordic", "Sissy Squat"] },
+        { name: "Machine Hip Adduction", sets: "2 working", reps: "10–12", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "Mind-muscle connection with your inner thighs. Great for adding thigh mass from the front! Push them hard!", canonical: "Machine Hip Adduction", alts: ["Cable Hip Adduction", "Copenhagen Hip Adduction"] },
+        { name: "Machine Hip Abduction", sets: "2 working", reps: "10–12", rest: "1–2 min", technique: "Failure — last set only (W2+)", rpe: "N/A early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "If possible, use pads to increase the ROM. Lean forward and grab onto the machine rails to stretch the glutes further.", canonical: "Machine Hip Abduction", alts: ["Cable Hip Abduction", "Lateral Band Walk"] },
+        { name: "Standing Calf Raise", sets: "2 working", reps: "10–12", rest: "1–2 min", technique: "Failure (W2+)", rpe: "~7-8 early / ~8-9 last (W1) · RPE 10 last (W2+)", notes: "1–2 second pause at the bottom. Roll your ankle back and forth on the balls of your feet rather than just going up onto toes.", canonical: "Standing Calf Raise", alts: ["Seated Calf Raise", "Leg Press Calf Press"] }
+      ]
+    }
+  ]
+};
+
+// State: { dayId_exerciseIndex: selectedAlt (string) }
+let selections = {};
+
+function loadSelections() {
+  try { const s = localStorage.getItem('nippard_hevy_v2'); if (s) selections = JSON.parse(s); } catch(e) {}
+}
+function saveSelections() {
+  try { localStorage.setItem('nippard_hevy_v2', JSON.stringify(selections)); } catch(e) {}
+}
+
+function getKey(dayId, idx) { return `${dayId}_${idx}`; }
+function getSelected(dayId, idx, canonical, alts) {
+  const k = getKey(dayId, idx);
+  return selections[k] || canonical;
+}
+
+function render(filterDayId) {
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+
+  PROGRAM.days.forEach(day => {
+    if (filterDayId !== 'all' && day.id !== filterDayId) return;
+
+    const sec = document.createElement('div');
+    sec.className = 'day-section';
+    sec.dataset.dayId = day.id;
+
+    sec.innerHTML = `
+      <div class="day-header">
+        <span class="day-tag ${day.id}">${day.label.split('(')[0].trim()}</span>
+        <span class="day-title">${day.label}</span>
+      </div>
+    `;
+
+    day.exercises.forEach((ex, idx) => {
+      const key = getKey(day.id, idx);
+      const selectedExercise = getSelected(day.id, idx, ex.canonical, ex.alts);
+      const card = document.createElement('div');
+      card.className = 'exercise-card';
+      card.dataset.key = key;
+
+      const allOptions = [ex.canonical, ...ex.alts];
+      const altsHtml = allOptions.map(opt => `
+        <span class="alt-chip ${opt === selectedExercise ? 'selected-alt' : ''} ${opt === ex.canonical ? 'canonical' : ''}" 
+              data-key="${key}" data-opt="${opt}" data-dayid="${day.id}" data-idx="${idx}" onclick="selectAlt(this)">
+          ${opt}${opt === ex.canonical ? ' ✓' : ''}
+        </span>
+      `).join('');
+
+      card.innerHTML = `
+        <div class="card-header" onclick="toggleCard(this)">
+          <div>
+            <div class="ex-name">${selectedExercise !== ex.canonical ? '⇄ ' : ''}${selectedExercise}</div>
+            <div class="ex-meta">
+              <span class="meta-item">🔢 ${ex.sets}</span>
+              <span class="meta-item">🎯 ${ex.reps} reps</span>
+              <span class="meta-item">⏱ ${ex.rest}</span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <svg class="toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="technique-row">
+            <span class="technique-chip">Technique: ${ex.technique}</span>
+            <span class="rpe-chip">RPE: ${ex.rpe}</span>
+          </div>
+          <div class="notes-box">
+            <span class="notes-label">Execution Notes</span>
+            <span class="notes-text">${ex.notes}</span>
+          </div>
+          <div class="alts-row">
+            <span class="alts-label">Exercise:</span>
+            ${altsHtml}
+          </div>
+        </div>
+      `;
+
+      if (selectedExercise !== ex.canonical) card.classList.add('selected');
+      sec.appendChild(card);
+    });
+
+    main.appendChild(sec);
+  });
+
+  // Hevy export section
+  if (filterDayId === 'all') {
+    const exportDiv = document.createElement('div');
+    exportDiv.className = 'hevy-export';
+    exportDiv.innerHTML = `
+      <h3>📱 Your Hevy Setup List</h3>
+      <p>Create one template per day in Hevy using your selected exercises below. Copy this, open Hevy → Workout Templates → New Template.</p>
+      <div class="hevy-list" id="hevyList"></div>
+    `;
+    main.appendChild(exportDiv);
+    renderHevyList();
+  }
+}
+
+function renderHevyList() {
+  const list = document.getElementById('hevyList');
+  if (!list) return;
+  let html = '';
+  PROGRAM.days.forEach(day => {
+    html += `<div class="day-group"><div class="day-name">${day.label}</div>`;
+    day.exercises.forEach((ex, idx) => {
+      const sel = getSelected(day.id, idx, ex.canonical, ex.alts);
+      const changed = sel !== ex.canonical;
+      html += `<div class="ex-line">${changed ? '⇄ ' : '• '}<span>${sel}</span> — ${ex.sets}, ${ex.reps} reps, ${ex.rest} rest</div>`;
+    });
+    html += '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function toggleCard(header) {
+  const card = header.closest('.exercise-card');
+  card.classList.toggle('open');
+}
+
+function selectAlt(chip) {
+  const key = chip.dataset.key;
+  const opt = chip.dataset.opt;
+  const dayId = chip.dataset.dayid;
+  const idx = parseInt(chip.dataset.idx);
+  const ex = PROGRAM.days.find(d => d.id === dayId).exercises[idx];
+
+  selections[key] = opt;
+  saveSelections();
+
+  // Update chips
+  document.querySelectorAll(`.alt-chip[data-key="${key}"]`).forEach(c => {
+    c.classList.toggle('selected-alt', c.dataset.opt === opt);
+  });
+
+  // Update card header
+  const card = chip.closest('.exercise-card');
+  const nameEl = card.querySelector('.ex-name');
+  nameEl.textContent = (opt !== ex.canonical ? '⇄ ' : '') + opt;
+  card.classList.toggle('selected', opt !== ex.canonical);
+
+  renderHevyList();
+}
+
+function filterDay(dayId, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render(dayId);
+}
+
+function exportHevy() {
+  let text = 'JEFF NIPPARD UPPPL → HEVY TEMPLATE\n';
+  text += '=====================================\n\n';
+  PROGRAM.days.forEach(day => {
+    text += `═══ ${day.label.toUpperCase()} ═══\n`;
+    day.exercises.forEach((ex, idx) => {
+      const sel = getSelected(day.id, idx, ex.canonical, ex.alts);
+      const changed = sel !== ex.canonical;
+      text += `${changed ? '[SWAP] ' : ''}${sel}\n`;
+      text += `  Sets: ${ex.sets} | Reps: ${ex.reps} | Rest: ${ex.rest}\n`;
+      text += `  Technique: ${ex.technique}\n\n`;
+    });
+    text += '\n';
+  });
+
+  navigator.clipboard.writeText(text).then(() => {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  });
+}
+
+loadSelections();
+render('all');
+</script>
+</body>
+</html>
